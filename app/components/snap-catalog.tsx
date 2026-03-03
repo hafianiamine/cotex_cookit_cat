@@ -128,6 +128,15 @@ export function SnapCatalog() {
     if (meta) meta.setAttribute("content", bgSolid);
   }, [bgSolid]);
 
+  const hero =
+    page === 0
+      ? isDesktop
+        ? IMAGES.page1.desktop
+        : IMAGES.page1.mobile
+      : isDesktop
+        ? IMAGES.page2.desktop
+        : IMAGES.page2.mobile;
+
   React.useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -187,20 +196,28 @@ export function SnapCatalog() {
 
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel as any);
-  }, [page]);
+  }, []);
 
   React.useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
 
+    let raf = 0;
     const onScroll = () => {
-      const h = el.clientHeight;
-      const y = el.scrollTop;
-      setPage((y >= h * 0.5 ? 1 : 0) as 0 | 1);
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const h = el.clientHeight;
+        const y = el.scrollTop;
+        const next = (y >= h * 0.5 ? 1 : 0) as 0 | 1;
+        setPage(next);
+      });
     };
 
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   const goTo = (p: 0 | 1) => {
@@ -212,15 +229,6 @@ export function SnapCatalog() {
 
   const page1Opacity = page === 0 ? 1 : 0;
   const page2Opacity = page === 1 ? 1 : 0;
-
-  const hero =
-    page === 0
-      ? isDesktop
-        ? IMAGES.page1.desktop
-        : IMAGES.page1.mobile
-      : isDesktop
-        ? IMAGES.page2.desktop
-        : IMAGES.page2.mobile;
 
   const cookbookFrLabel =
     lang === "ar" ? "تحميل (FR)" : lang === "en" ? "Download (FR)" : "Télécharger (FR)";
@@ -238,11 +246,10 @@ export function SnapCatalog() {
           exit={{ opacity: 0, scale: 0.99, filter: "blur(10px)" }}
           transition={{ duration: 0.55, ease: "easeInOut" }}
         >
-          <div className="absolute inset-0" style={{ background: bgSolid }} />
           <motion.img
             src={hero}
             alt=""
-            className="absolute inset-0 h-full w-full object-cover lg:object-contain lg:object-center"
+            className="absolute inset-0 h-screen w-screen object-cover object-center"
             draggable={false}
           />
         </motion.div>
