@@ -2,6 +2,7 @@ import "./globals.css";
 import { ThemeProvider } from "./components/providers/theme-provider";
 import { LangProvider } from "./components/providers/lang-provider";
 
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>

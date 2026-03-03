@@ -8,17 +8,20 @@ import { TopBar } from "./topbar";
 import { Download } from "lucide-react";
 
 const LINKS = {
-  cookbook_fr: "/pdfs/cotex-cookbook-fr.pdf",
-  cookbook_ar: "/pdfs/cotex-cookbook-ar.pdf",
-  catalogue_multi: "/pdfs/cotex-catalogue.pdf",
+  cookbook_fr: "/pdfs/cookit-cookbook-fr.pdf",
+  cookbook_ar: "/pdfs/cookit-cookbook-ar.pdf",
+  catalogue_multi: "/pdfs/cookit-catalogue.pdf",
 };
 
-// ✅ YOUR REAL PATHS (based on your screenshot)
 const IMAGES = {
-  hero1: "/images/cotex-01.jpg",
-  hero2: "/images/cotex-02.jpg",
-
-  // Keep these if they exist in your folders
+  page1: {
+    mobile: "/images/cotex-01-mobile.jpg",
+    desktop: "/images/cotex-01-desktop.jpg",
+  },
+  page2: {
+    mobile: "/images/cotex-02-mobile.jpg",
+    desktop: "/images/cotex-02-desktop.jpg",
+  },
   dishes: [
     "/images/dishes/dish-1.png",
     "/images/dishes/dish-2.png",
@@ -36,8 +39,21 @@ const BG = {
   b: "#ff9602",
 };
 
-// ✅ Keeps content ABOVE bottom navigation on all screens (safe-area + nav height)
 const NAV_SAFE_PB = "pb-[calc(env(safe-area-inset-bottom)+120px)]";
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = React.useState(false);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return isDesktop;
+}
 
 function hexToRgb(hex: string) {
   const h = hex.replace("#", "").trim();
@@ -46,10 +62,6 @@ function hexToRgb(hex: string) {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-/**
- * ✅ PUSHED UP GRADIENT (more color higher, less 50/50 split)
- * To push even more UP: reduce 35% -> 30% and 58% -> 50%
- */
 function overlayGradient(colorHex: string) {
   const { r, g, b } = hexToRgb(colorHex);
   return `linear-gradient(to top,
@@ -65,18 +77,26 @@ function overlayGradient(colorHex: string) {
 export function SnapCatalog() {
   const { dir, t, lang } = useLang();
   const isRTL = dir === "rtl";
+  const isDesktop = useIsDesktop();
 
   const scrollerRef = React.useRef<HTMLDivElement>(null);
   const [page, setPage] = React.useState<0 | 1>(0);
   const lockRef = React.useRef(false);
 
-  // ---------- PRELOADER ----------
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
 
-    const urls = [IMAGES.hero1, IMAGES.hero2, ...IMAGES.dishes, ...IMAGES.products, "/logo.png"];
+    const urls = [
+      IMAGES.page1.mobile,
+      IMAGES.page1.desktop,
+      IMAGES.page2.mobile,
+      IMAGES.page2.desktop,
+      ...IMAGES.dishes,
+      ...IMAGES.products,
+      "/logo.png",
+    ];
 
     let done = 0;
     const mark = () => {
@@ -101,7 +121,6 @@ export function SnapCatalog() {
     };
   }, []);
 
-  // ---------- Browser theme-color ----------
   const bgSolid = page === 0 ? BG.a : BG.b;
 
   React.useEffect(() => {
@@ -109,7 +128,6 @@ export function SnapCatalog() {
     if (meta) meta.setAttribute("content", bgSolid);
   }, [bgSolid]);
 
-  // ---------- MOBILE “step by step” swipe ----------
   React.useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -144,7 +162,6 @@ export function SnapCatalog() {
     };
   }, []);
 
-  // ---------- Desktop wheel “1 wheel = 1 page” ----------
   React.useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -172,7 +189,6 @@ export function SnapCatalog() {
     return () => el.removeEventListener("wheel", onWheel as any);
   }, [page]);
 
-  // ---------- Sync page from scroll ----------
   React.useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -194,12 +210,17 @@ export function SnapCatalog() {
     setPage(p);
   };
 
-  // ✅ Page visibility ONLY
   const page1Opacity = page === 0 ? 1 : 0;
   const page2Opacity = page === 1 ? 1 : 0;
 
-  // ✅ Hero
-  const hero = page === 0 ? IMAGES.hero1 : IMAGES.hero2;
+  const hero =
+    page === 0
+      ? isDesktop
+        ? IMAGES.page1.desktop
+        : IMAGES.page1.mobile
+      : isDesktop
+        ? IMAGES.page2.desktop
+        : IMAGES.page2.mobile;
 
   const cookbookFrLabel =
     lang === "ar" ? "تحميل (FR)" : lang === "en" ? "Download (FR)" : "Télécharger (FR)";
@@ -208,7 +229,6 @@ export function SnapCatalog() {
 
   return (
     <div className="relative isolate">
-      {/* ✅ HERO */}
       <AnimatePresence mode="wait">
         <motion.div
           key={hero}
@@ -217,15 +237,17 @@ export function SnapCatalog() {
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
           exit={{ opacity: 0, scale: 0.99, filter: "blur(10px)" }}
           transition={{ duration: 0.55, ease: "easeInOut" }}
-          style={{
-            backgroundImage: `url(${hero})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
+        >
+          <div className="absolute inset-0" style={{ background: bgSolid }} />
+          <motion.img
+            src={hero}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover lg:object-contain lg:object-center"
+            draggable={false}
+          />
+        </motion.div>
       </AnimatePresence>
 
-      {/* ✅ OVERLAY */}
       <div className="fixed inset-0 z-10 pointer-events-none">
         <motion.div
           className="absolute inset-0"
@@ -241,7 +263,6 @@ export function SnapCatalog() {
         />
       </div>
 
-      {/* Preloader */}
       <AnimatePresence>
         {!ready && (
           <motion.div
@@ -265,9 +286,6 @@ export function SnapCatalog() {
 
       <TopBar activePage={page} onGoCatalog1={() => goTo(0)} onGoCatalog2={() => goTo(1)} />
 
-
-
-      {/* Scroller */}
       <div
         ref={scrollerRef}
         className={[
@@ -276,7 +294,6 @@ export function SnapCatalog() {
           isRTL ? "lg:ml-auto" : "",
         ].join(" ")}
       >
-        {/* PAGE 1 */}
         <section className="snap-start h-[100svh] flex items-end lg:items-center">
           <div className={`w-full px-6 sm:px-10 ${NAV_SAFE_PB} lg:pb-0`}>
             <motion.div style={{ opacity: page1Opacity }} className="max-w-xl space-y-4">
@@ -305,26 +322,25 @@ export function SnapCatalog() {
           </div>
         </section>
 
-        {/* PAGE 2 */}
-<section className="snap-start h-[100svh] flex items-end lg:items-center">
-  <div className={`w-full px-6 sm:px-10 ${NAV_SAFE_PB} lg:pb-0`}>
-    <motion.div style={{ opacity: page2Opacity }} className="max-w-xl space-y-4">
-      <h2 className="text-4xl sm:text-5xl font-bold text-white leading-tight">{t.title2}</h2>
-      <p className="text-white/90 text-base sm:text-lg">{t.desc2}</p>
-      <p className="text-white/80 text-sm sm:text-base">{t.hint2}</p>
+        <section className="snap-start h-[100svh] flex items-end lg:items-center">
+          <div className={`w-full px-6 sm:px-10 ${NAV_SAFE_PB} lg:pb-0`}>
+            <motion.div style={{ opacity: page2Opacity }} className="max-w-xl space-y-4">
+              <h2 className="text-4xl sm:text-5xl font-bold text-white leading-tight">{t.title2}</h2>
+              <p className="text-white/90 text-base sm:text-lg">{t.desc2}</p>
+              <p className="text-white/80 text-sm sm:text-base">{t.hint2}</p>
 
-      <div className="pt-3">
-        <a href={LINKS.catalogue_multi} download className="block">
-          <Button className="w-full h-12 text-base bg-black/70 text-white hover:bg-black/60">
-            <span className="inline-flex items-center gap-2">
-              <Download size={18} /> {t.download2}
-            </span>
-          </Button>
-        </a>
-      </div>
-    </motion.div>
-  </div>
-</section>
+              <div className="pt-3">
+                <a href={LINKS.catalogue_multi} download className="block">
+                  <Button className="w-full h-12 text-base bg-black/70 text-white hover:bg-black/60">
+                    <span className="inline-flex items-center gap-2">
+                      <Download size={18} /> {t.download2}
+                    </span>
+                  </Button>
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        </section>
       </div>
     </div>
   );
